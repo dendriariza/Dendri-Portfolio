@@ -1,0 +1,89 @@
+import numpy as np
+import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display, clear_output
+
+cash_slider = widgets.IntSlider(value=25000000, min=25000000, max=500000000, step=25000000, description='Min Cash:')
+cash_max_slider = widgets.IntSlider(value=500000000, min=50000000, max=1000000000, step=25000000, description='Max Cash:')
+stock_slider = widgets.IntSlider(value=7500, min=7500, max=150000, step=7500, description='Min Stock:')
+stock_max_slider = widgets.IntSlider(value=150000, min=15000, max=300000, step=7500, description='Max Stock:')
+sim_days = widgets.IntSlider(value=500, min=100, max=5000, step=100, description='Sim Days:')
+trades_per_day = widgets.IntSlider(value=200, min=50, max=500, step=50, description='Trades/Day:')
+
+run_button = widgets.Button(description="Run Simulation", button_style='success')
+output = widgets.Output()
+
+LOT_SIZE = 500
+QUOTE_LOTS_PER_SIDE = 15
+MIN_DAILY_TURNOVER = 100_000_000
+AVG_PRICE = 1000
+SPREAD = 5
+TICK_VALUE = 1
+
+def simulate_day(initial_cash, initial_stock, trades_per_day):
+    cash = initial_cash
+    stock = initial_stock
+    trade_values = []
+
+    for _ in range(trades_per_day):
+        side = np.random.choice(['buy', 'sell'], p=[0.6, 0.4])
+        lot_count = np.random.randint(1, QUOTE_LOTS_PER_SIDE + 1)
+        quantity = LOT_SIZE * lot_count
+        price = AVG_PRICE + (SPREAD / 2) * TICK_VALUE if side == 'sell' else AVG_PRICE - (SPREAD / 2) * TICK_VALUE
+        notional = price * quantity
+
+        if side == 'sell':
+            if stock >= quantity:
+                stock -= quantity
+                cash += notional
+                trade_values.append(notional)
+        else:
+            if cash >= notional:
+                stock += quantity
+                cash -= notional
+                trade_values.append(notional)
+
+    turnover = sum(trade_values)
+    return turnover >= MIN_DAILY_TURNOVER
+
+def run_simulation(_):
+    output.clear_output()
+    np.random.seed(42)
+
+    if cash_slider.value > cash_max_slider.value or stock_slider.value > stock_max_slider.value:
+        with output:
+            print("Please ensure Min ≤ Max for both cash and stock ranges.")
+        return
+
+    cash_range = range(cash_slider.value, cash_max_slider.value + 1, 25000000)
+    stock_range = range(stock_slider.value, stock_max_slider.value + 1, 7500)
+
+    result_data = []
+
+    for init_cash in cash_range:
+        for init_stock in stock_range:
+            success_count = 0
+            for _ in range(sim_days.value):
+                if simulate_day(init_cash, init_stock, trades_per_day.value):
+                    success_count += 1
+            success_rate = round(success_count / sim_days.value, 3)
+            result_data.append({
+                'Initial Cash (IDR)': init_cash,
+                'Initial Stock (Shares)': init_stock,
+                'Success Rate': success_rate
+            })
+
+    df = pd.DataFrame(result_data)
+    df = df.sort_values(by='Success Rate', ascending=False)
+
+    with output:
+        clear_output()
+        display(df)
+
+run_button.on_click(run_simulation)
+controls = widgets.VBox([
+    cash_slider, cash_max_slider,
+    stock_slider, stock_max_slider,
+    sim_days, trades_per_day, run_button
+])
+display(widgets.VBox([widgets.HBox([controls]), output]))
