@@ -24,9 +24,31 @@ The NYSE dataset (1962–1986) provides a long horizon of daily market activity,
 - Daily DJIA return – highly noisy but essential for understanding price movements.  
 - Log trading volume – a proxy for market participation and liquidity.  
 - Log volatility – a key input for risk models, VaR, and derivatives pricing.  
+
 This makes the dataset ideal for building a multi-output time series predictor that captures how these variables interact dynamically.  
 Instead of predicting each variable separately, I wanted a single unified model that learns the shared information structure across returns, volume, and volatility.  
+
 This reflects real-world financial markets where:  
 - Volume and volatility are strongly intertwined.  
 - Volatility exhibits autocorrelation and clustering.  
 - Returns are largely unpredictable but still influenced by market regimes.  
+
+### Modeling Approach
+The model is implemented using TensorFlow/Keras and is structured around a multi-output LSTM network. The key design choice is using 5 trading days of historical data to predict all three market statistics for the next day.  
+
+- Data Standardization  
+The input features are standardized using only the training set to avoid look-ahead bias, ensuring realistic model behavior.  
+- Sequence Windowing  
+Each input sample is a 5×3 matrix representing:  
+5 days × (return, log volume, log volatility)  
+- LSTM Architecture  
+  - The first LSTM layer learns short-term temporal dependencies.  
+  - The second LSTM encodes a compressed representation of market dynamics.  
+  - The Dense layer produces three simultaneous predictions.
+  
+- Training Procedure  
+  - Optimized using Adam.  
+  - Validation loss monitored with ModelCheckpoint.  
+  - 100-epoch training ensures convergence without overfitting.  
+- Model Saving  
+  - The best-performing model is stored as bestmodel.keras, which preserves the architecture and learned weights.  
