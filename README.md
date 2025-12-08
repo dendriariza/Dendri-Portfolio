@@ -16,3 +16,5 @@ The model is trained on NYSE data from 1962–1986, standardized using training-
   - Weak return predictability  
   - Volume–volatility correlation  
   - Strong volatility persistence  
+
+<img width="443" height="337" alt="image" src="https://github.com/user-attachments/assets/526bf33b-c1e3-4c0a-939d-6f50ba8abf3c" />
